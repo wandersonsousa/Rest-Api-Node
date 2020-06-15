@@ -1,0 +1,8 @@
+{
+    "productNotFound":{
+        "erro":"produto não encontrado"
+    },
+    "sucessOperation":{
+        "mensagem":"sucesso"
+    }
+}
