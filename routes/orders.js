@@ -3,31 +3,29 @@ const mysql = require('../src/mysql').pool
 
 const router = express.Router();
 
-const {getCurrentTime} = require('../utils/scripts')
 const logPattern = require('../utils/logpattern.json')
 
 router.get('/', (req, res) => {
     return mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
-            'SELECT * FROM products',
+            'SELECT * FROM orders',
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
                 const response = {
                     tipo:'GET',
                     length: result.length,
-                    descricao: 'RETORNA TODOS OS PRODUTOS',
-                    products: result.map( prod => {
+                    descricao: 'RETORNA TODOS OS PEDIDOS',
+                    pedidos: result.map( order => {
                         return {
-                            id: prod.id,
-                            nome: prod.name,
-                            preco: prod.value,
-                            criadoEm: prod['dateCreated'] + ' ' + prod['hourCreated'],
+                            id: order.id,
+                            idProduto: order.idProduct,
+                            quantidade: order.quantity,
                             visualizar: {
                                 tipo:'GET',
-                                descricao: 'RETORNA UM ',
-                                url: 'http://localhost:3000/products/'
+                                descricao:'DETALHA UM PEDIDO',
+                                url:'http://localhost:3000/products/' + order.id
                             }
                         }
                     })
@@ -38,31 +36,31 @@ router.get('/', (req, res) => {
     });
 });
 
-router.get('/:productId', (req, res) => {
-    const id = req.params.productId;
+router.get('/:orderId', (req, res) => {
+    const id = req.params.orderId;
     return mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
-            `SELECT * FROM products WHERE id=${id}`,
+            `SELECT * FROM orders WHERE id=${id}`,
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
 
                 if( result.length <= 0) {
-                    return res.status(404).send( logPattern.productNotFound )
+                    return res.status(404).send( logPattern.orderNotFound )
                 }
+
                 result = result[0]
                 const response = {
                     tipo:'GET',
-                    descricao:'DETALHES PRODUTO',
-                    produto: {
+                    descricao:'DETALHES PEDIDO',
+                    pedido: {
                         id: result.id,
-                        nome:result.name,
-                        preco: result.value,
+                        idProduto:result.idProduct,
                         visualizar: {
                             tipo:'GET',
                             descricao:'DETALHA UM PRODUTO',
-                            url:'http://localhost:3000/products/[id]'
+                            url:'http://localhost:3000/products'
                         }
                     }
                 }
@@ -77,24 +75,24 @@ router.post('/', (req, res) => {
     mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
-            'INSERT INTO products(name, value, dateCreated, hourCreated) VALUES(?,?,?,?)',
-            [req.body.name, req.body.value, getCurrentTime().currentDate, getCurrentTime().currentTime ],
+            'INSERT INTO orders(idProduct, quantity	) VALUES(?,?)',
+            [req.body.idProduct, req.body.quantity ],
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
 
                 const response = {
-                    mensagem:'PRODUTO INSERIDO COM SUCESSO',
+                    mensagem:'PEDIDO INSERIDO COM SUCESSO',
                     tipo:'POST',
-                    descricao:'INSERE UM PRODUTO',
+                    descricao:'INSERE UM PEDIDO',
                     produtoCriado: {
                         id: result.id,
                         nome:req.body.name,
                         preco:req.body.value,
                         visualizar: {
                             tipo:'GET',
-                            descricao:'DETALHES TODOS OS PRODUTOS',
-                            url:'http://localhost:3000/products'
+                            descricao:'DETALHES TODOS OS PEDIDOS',
+                            url:'http://localhost:3000/orders'
                         }
                     }
                 }
@@ -105,30 +103,30 @@ router.post('/', (req, res) => {
     });
 });
 
-router.delete('/:productId', (req, res) => {
-    const id = req.params.productId;
+router.delete('/:orderId', (req, res) => {
+    const id = req.params.orderId;
     return mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
-            `DELETE FROM products  WHERE id=${id}`,
+            `DELETE FROM orders  WHERE id=${id}`,
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
-                if(result.affectedRows <= 0)return res.status(404).send( logPattern.productNotFound )
+                if(result.affectedRows <= 0)return res.status(404).send( logPattern.orderNotFound )
 
                 const response = {
-                    mensagem:'PRODUTO DELETADO COM SUCESSO',
+                    mensagem:'PEDIDO DELETADO COM SUCESSO',
                     tipo:'DELETE',
-                    descricao:'DELETA UM PRODUTO',
+                    descricao:'DELETA UM PEDIDO',
                     produtoDeletado: {
                         id: id,
                         visualizar: {
                             tipo:'POST',
                             descricao:'INSERE UM PRODUTO',
-                            url:'http://localhost:3000/products',
+                            url:'http://localhost:3000/orders',
                             body:{
-                                name:'string',
-                                value:'int'
+                                idProduct:'int',
+                                quantity:'int'
                             }
                         }
                     }
@@ -140,37 +138,10 @@ router.delete('/:productId', (req, res) => {
     });
 });
 
-router.patch('/:productId', (req, res) => {
-    const id = req.params.productId;
-    return mysql.getConnection( (error, conn) => {
-        if(error)return res.status(500).send({error:error, response:null})
-        conn.query(
-            `UPDATE products SET name = "${req.body.name}", value = ${req.body.value} WHERE id = ${id};`,
-            (error, result) => {
-                conn.release();
-                if(error)return res.status(500).send({error:error,response:null});
-                if(result.affectedRows <= 0)return res.status(404).send( logPattern.productNotFound )
 
-                const response = {
-                    mensagem:'PRODUTO ATUALIZADO COM SUCESSO',
-                    tipo:'PATCH',
-                    descricao:'ATUALIZA UM PRODUTO',
-                    produtoAtualizado: {
-                        id: id,
-                        nome:req.body.name,
-                        preco:req.body.value,
-                        visualizar: {
-                            tipo:'GET',
-                            descricao:'DETALHE OS PRODUTOS',
-                            url:'http://localhost:3000/products'
-                        }
-                    }
-                };
 
-                return res.status(200).send( response );
-            }
-        )
-    });
-});
+
+
+
 
 module.exports = router 

@@ -15,8 +15,10 @@ app.use(cors( {
 } ))
 
 const productsRoute = require('../routes/products');
+const ordersRoute = require('../routes/orders');
 
 app.use('/products', productsRoute);
+app.use('/orders', ordersRoute);
 
 app.use((req, res, next)=> {
     const error = new Error('Not Found');

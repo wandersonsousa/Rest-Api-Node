@@ -2,6 +2,9 @@
     "productNotFound":{
         "erro":"produto não encontrado"
     },
+    "orderNotFound":{
+        "erro":"pedido não encontrado"
+    },
     "sucessOperation":{
         "mensagem":"sucesso"
     }
