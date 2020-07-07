@@ -3,3 +3,4 @@ package-lock.json
 consult.sql
 nodemon.json
 products_model.mwb*
+uploads/*

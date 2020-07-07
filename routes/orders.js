@@ -7,9 +7,19 @@ const logPattern = require('../utils/logpattern.json')
 
 router.get('/', (req, res) => {
     return mysql.getConnection( (error, conn)=> {
-        if(error)return res.status(500).send({error:error, response:null})
+        if(error)return res.status(500).send({error:error, response:null});
         conn.query(
-            'SELECT * FROM orders',
+            `    SELECT  orders.id,
+                    orders.idProduct,
+                    orders.quantity,
+                    products.name,
+                    products.value,
+                    products.dateCreated,
+                    products.hourCreated
+                FROM orders
+                INNER JOIN products
+                ON products.id = orders.idProduct;
+            `,
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
@@ -20,12 +30,17 @@ router.get('/', (req, res) => {
                     pedidos: result.map( order => {
                         return {
                             id: order.id,
-                            idProduto: order.idProduct,
                             quantidade: order.quantity,
+                            produto: {
+                                nome:order.name,
+                                valor:order.value,
+                                criadoEm:order['dateCreated'] + ' ' + order['hourCreated'],
+                                idProduto: order.idProduct,
+                            },
                             visualizar: {
                                 tipo:'GET',
                                 descricao:'DETALHA UM PEDIDO',
-                                url:'http://localhost:3000/products/' + order.id
+                                url:'http://localhost:3000/orders/' + order.id
                             }
                         }
                     })
@@ -39,9 +54,9 @@ router.get('/', (req, res) => {
 router.get('/:orderId', (req, res) => {
     const id = req.params.orderId;
     return mysql.getConnection( (error, conn)=> {
-        if(error)return res.status(500).send({error:error, response:null})
+        if(error)return res.status(500).send({error:error, response:null});
         conn.query(
-            `SELECT * FROM orders WHERE id=${id}`,
+            `SELECT * FROM orders WHERE id = ${id};`,
             (error, result) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
@@ -49,8 +64,7 @@ router.get('/:orderId', (req, res) => {
                 if( result.length <= 0) {
                     return res.status(404).send( logPattern.orderNotFound )
                 }
-
-                result = result[0]
+                result = result[0];
                 const response = {
                     tipo:'GET',
                     descricao:'DETALHES PEDIDO',
@@ -59,8 +73,8 @@ router.get('/:orderId', (req, res) => {
                         idProduto:result.idProduct,
                         visualizar: {
                             tipo:'GET',
-                            descricao:'DETALHA UM PRODUTO',
-                            url:'http://localhost:3000/products'
+                            descricao:'DETALHA TODOS OS PEDIDOS',
+                            url:'http://localhost:3000/orders'
                         }
                     }
                 }
@@ -122,7 +136,7 @@ router.delete('/:orderId', (req, res) => {
                         id: id,
                         visualizar: {
                             tipo:'POST',
-                            descricao:'INSERE UM PRODUTO',
+                            descricao:'INSERE UM PEDIDO',
                             url:'http://localhost:3000/orders',
                             body:{
                                 idProduct:'int',
