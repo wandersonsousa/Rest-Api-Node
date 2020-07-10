@@ -2,6 +2,8 @@ const express = require('express');
 const mysql = require('../src/mysql').pool
 const multer = require('multer');
 
+const signinMiddleware = require('../middleware/signin');
+
 const {getCurrentTime} = require('../utils/scripts')
 const logPattern = require('../utils/logpattern.json')
 
@@ -15,7 +17,7 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter( req, file, cb){
-    if(file.mimetype === 'image/png' || file.mimetype === 'image.jpeg'){
+    if(file.mimetype === 'image/png' || file.mimetype === 'image.jpeg' || file.mimetype === 'image.jpg'){
         return cb(null, true);
     }
     cb(null, false);
@@ -75,9 +77,10 @@ router.get('/:productId', (req, res) => {
                 conn.release();
                 if(error)return res.status(500).send({error:error,response:null});
 
-                if( result.length <= 0) {
+                if( result.length < 1) {
                     return res.status(404).send( logPattern.productNotFound )
                 }
+
                 result = result[0]
                 const response = {
                     tipo:'GET',
@@ -86,7 +89,7 @@ router.get('/:productId', (req, res) => {
                         id: result.id,
                         nome:result.name,
                         preco: result.value,
-                        imageUrl:prod.product_img,
+                        imageUrl:result.product_img,
                         criadoEm: result['dateCreated'] + ' ' + result['hourCreated'],
                         visualizar: {
                             tipo:'GET',
@@ -102,8 +105,8 @@ router.get('/:productId', (req, res) => {
     });
 });
 
-router.post('/', upload.single('imgProduct'), (req, res) => {
-
+router.post('/',signinMiddleware.required, upload.single('imgProduct'), (req, res) => {
+    console.log( req.user );
     mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
@@ -111,7 +114,11 @@ router.post('/', upload.single('imgProduct'), (req, res) => {
             [req.body.name, req.body.value, getCurrentTime().currentDate, getCurrentTime().currentTime, req.file.path ],
             (error, result) => {
                 conn.release();
+                
+                console.log(req.file);
                 if(error)return res.status(500).send({error:error,response:null});
+                
+               
 
                 const response = {
                     mensagem:'PRODUTO INSERIDO COM SUCESSO',
