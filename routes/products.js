@@ -143,7 +143,7 @@ router.post('/',signinMiddleware.required, upload.single('imgProduct'), (req, re
     });
 });
 
-router.delete('/:productId', (req, res) => {
+router.delete('/:productId', signinMiddleware.required, (req, res) => {
     const id = req.params.productId;
     return mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
@@ -178,7 +178,7 @@ router.delete('/:productId', (req, res) => {
     });
 });
 
-router.delete('/', (req, res) => {
+router.delete('/', signinMiddleware.required, (req, res) => {
     return mysql.getConnection( (error, conn)=> {
         if(error)return res.status(500).send({error:error, response:null})
         conn.query(
@@ -213,7 +213,7 @@ router.delete('/', (req, res) => {
 
 
 
-router.patch('/:productId', (req, res) => {
+router.patch('/:productId', signinMiddleware.required, (req, res) => {
     const id = req.params.productId;
     return mysql.getConnection( (error, conn) => {
         if(error)return res.status(500).send({error:error, response:null})
